@@ -29,7 +29,7 @@
 // ── CONFIG — change these ──────────────────────────────────
 const char* WIFI_SSID      = "Redmi K50i";
 const char* WIFI_PASSWORD  = "12345678";
-const char* BACKEND_URL    = "https://map-production-5cdd.up.railway.app/location";
+const char* BACKEND_URL    = "https://map-xmu3.onrender.com/location";
 
 const char* DEVICE_ID      = "TRANSPORT-001";
 const char* DEVICE_TYPE    = "Transport";
