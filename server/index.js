@@ -20,6 +20,7 @@ const ALLOWED_ORIGINS = CLIENT_ORIGIN === '*'
 
 const io = new Server(httpServer, {
   cors: { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'] },
+  transports: ['websocket', 'polling'],
 });
 
 // Allow configured origins (mobile on same WiFi needs this)

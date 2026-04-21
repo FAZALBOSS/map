@@ -31,9 +31,9 @@ export function useDevices() {
         }
       });
 
-    // 2. Socket.io — start with polling, upgrade to websocket automatically
+    // 2. Socket.io — websocket only (Render free tier doesn't support sticky sessions for polling)
     const socket = io(SERVER_URL, {
-      transports: ['polling', 'websocket'], // polling first avoids the WS-closed-early error
+      transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
