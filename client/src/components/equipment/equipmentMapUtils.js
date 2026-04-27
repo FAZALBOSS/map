@@ -1,4 +1,3 @@
-import React, { useEffect, useRef } from 'react';
 import {
   CATEGORY_ICONS,
   STATUS_COLORS,
@@ -207,53 +206,3 @@ export function createEquipmentLayer() {
   return { setVisible, updateMarkers, destroy };
 }
 
-/**
- * React component wrapper — uses imperative API internally.
- * Renders nothing to the DOM; all rendering is via Leaflet.
- */
-export default function EquipmentMapLayer({
-  mapRef,
-  equipment,
-  visible,
-  userLat,
-  userLng,
-  onBookFromMap,
-}) {
-  const layerRef = useRef(null);
-
-  // Expose book function globally for popup button
-  useEffect(() => {
-    window.__equipBookFromMap = (id) => {
-      const equip = equipment.find((e) => e.id === id);
-      if (equip && onBookFromMap) onBookFromMap(equip);
-    };
-    return () => { delete window.__equipBookFromMap; };
-  }, [equipment, onBookFromMap]);
-
-  // Create/destroy the equipment layer
-  useEffect(() => {
-    if (!layerRef.current) {
-      layerRef.current = createEquipmentLayer();
-    }
-    return () => {
-      if (layerRef.current) {
-        layerRef.current.destroy(mapRef);
-        layerRef.current = null;
-      }
-    };
-  }, []);
-
-  // Update visibility
-  useEffect(() => {
-    if (!mapRef || !window.L || !layerRef.current) return;
-    layerRef.current.setVisible(mapRef, visible);
-  }, [mapRef, visible]);
-
-  // Update markers
-  useEffect(() => {
-    if (!mapRef || !window.L || !layerRef.current || !visible) return;
-    layerRef.current.updateMarkers(mapRef, equipment || [], userLat, userLng);
-  }, [mapRef, equipment, visible, userLat, userLng]);
-
-  return null;
-}

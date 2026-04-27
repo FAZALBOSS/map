@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStatusConfig } from '../utils/statusConfig';
-import { createEquipmentLayer } from './equipment/EquipmentMapLayer';
+import { createEquipmentLayer } from './equipment/equipmentMapUtils';
 
 function buildMarkerHtml(device, isFocused) {
   const pulse = device.source === 'mobile' || device.source === 'esp8266';
