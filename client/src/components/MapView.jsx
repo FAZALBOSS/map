@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStatusConfig } from '../utils/statusConfig';
+import EquipmentMapLayer from './equipment/EquipmentMapLayer';
 
 function buildMarkerHtml(device, isFocused) {
   const pulse = device.source === 'mobile' || device.source === 'esp8266';
@@ -22,7 +23,17 @@ function buildMarkerHtml(device, isFocused) {
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>`;
 }
 
-export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
+export default function MapView({
+  devices,
+  focusedDevice,
+  setFocusedDevice,
+  equipment,
+  showEquipment,
+  userLat,
+  userLng,
+  onBookFromMap,
+  flyToEquipment,
+}) {
   const mapRef     = useRef(null);
   const markersRef = useRef({});
   const pathRef    = useRef(null);
@@ -53,7 +64,7 @@ export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
     const map = window.L.map('leaflet-map', {
       zoomControl: false,
       attributionControl: true,
-    }).setView([20.5937, 78.9629], 5);
+    }).setView([31.634, 74.872], 12);
 
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -73,6 +84,12 @@ export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
       initializedRef.current = false;
     };
   }, [mapReady]);
+
+  // Fly to equipment when requested
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !flyToEquipment) return;
+    mapRef.current.flyTo([flyToEquipment.lat, flyToEquipment.lng], 16, { duration: 1 });
+  }, [flyToEquipment, mapReady]);
 
   // Sync markers on device update
   useEffect(() => {
@@ -189,6 +206,18 @@ export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
     <section className="flex-1 relative">
       <div id="leaflet-map" className="w-full h-full" />
 
+      {/* Equipment Map Layer */}
+      {mapReady && mapRef.current && (
+        <EquipmentMapLayer
+          mapRef={mapRef.current}
+          equipment={equipment || []}
+          visible={showEquipment}
+          userLat={userLat}
+          userLng={userLng}
+          onBookFromMap={onBookFromMap}
+        />
+      )}
+
       {/* Re-center */}
       {realDevice && (
         <button
@@ -200,7 +229,7 @@ export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
       )}
 
       {/* No devices placeholder */}
-      {devices.length === 0 && (
+      {devices.length === 0 && !showEquipment && (
         <div className="absolute inset-0 flex items-center justify-center z-[1000] pointer-events-none">
           <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg px-6 py-5 text-center max-w-xs">
             <div className="text-3xl mb-2">📡</div>
@@ -220,6 +249,23 @@ export default function MapView({ devices, focusedDevice, setFocusedDevice }) {
           <div className="w-5 border-t-2 border-dashed border-blue-500" />
           <span>Trail</span>
         </div>
+        {showEquipment && (
+          <>
+            <div className="w-full border-t border-gray-200 my-0.5" />
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span>Busy</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span>Maintenance</span>
+            </div>
+          </>
+        )}
       </div>
 
       <AnimatePresence>

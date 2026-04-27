@@ -1,14 +1,37 @@
 import React from 'react';
-import { Box, Bell, Settings, UserCircle } from 'lucide-react';
+import { Box, Bell, Settings, UserCircle, MapPin, Tractor } from 'lucide-react';
 
-export default function Navbar({ connected }) {
+const TABS = [
+  { id: 'tracking', label: 'Live Tracking', icon: '📡' },
+  { id: 'equipment', label: 'Farm Equipment', icon: '🚜' },
+];
+
+export default function Navbar({ connected, activeTab, onTabChange }) {
   return (
     <header className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 z-20">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
           <Box className="text-white w-5 h-5" />
         </div>
-        <span className="font-semibold text-[15px] tracking-tight">Smart Equipment Monitoring</span>
+        <span className="font-semibold text-[15px] tracking-tight">Smart Farm Tracking</span>
+
+        {/* Tab Switcher */}
+        <div className="ml-6 flex items-center bg-gray-100 rounded-lg p-0.5">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange && onTabChange(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="text-sm">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-6">

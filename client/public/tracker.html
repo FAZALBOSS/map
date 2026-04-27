@@ -18,12 +18,12 @@
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       background:var(--bg);color:var(--text);
       min-height:100dvh;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
+      align-items:center;justify-content:flex-start;
       padding:20px;gap:16px;
     }
 
     /* Header */
-    .header{text-align:center}
+    .header{text-align:center;padding-top:10px}
     .header .icon{font-size:40px;margin-bottom:8px}
     .header h1{font-size:20px;font-weight:700;letter-spacing:-0.3px}
     .header p{font-size:13px;color:var(--muted);margin-top:4px}
@@ -107,6 +107,78 @@
       font-size:11px;color:var(--muted);text-align:center;
       max-width:300px;line-height:1.5;
     }
+
+    /* Equipment Finder Styles */
+    .divider{
+      width:100%;max-width:380px;border:none;
+      border-top:1px solid var(--border);margin:8px 0;
+    }
+
+    .equip-finder{
+      width:100%;max-width:380px;
+    }
+
+    .btn-find{
+      background:var(--blue);color:#fff;
+      width:100%;padding:14px;border-radius:14px;border:none;
+      font-size:15px;font-weight:700;cursor:pointer;
+      transition:transform .1s,opacity .15s;letter-spacing:.2px;
+    }
+    .btn-find:active{transform:scale(0.97)}
+    .btn-find:disabled{opacity:0.5;cursor:not-allowed}
+
+    .equip-list{
+      display:flex;flex-direction:column;gap:10px;
+      margin-top:14px;
+    }
+
+    .equip-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:14px;
+    }
+    .equip-card-header{
+      display:flex;align-items:center;gap:10px;margin-bottom:8px;
+    }
+    .equip-icon{font-size:28px}
+    .equip-info{flex:1}
+    .equip-name{font-size:14px;font-weight:600;color:var(--text)}
+    .equip-meta{font-size:12px;color:var(--muted);margin-top:2px}
+
+    .equip-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;
+    }
+    .badge-available{background:rgba(34,197,94,.15);color:var(--green)}
+    .badge-busy{background:rgba(239,68,68,.15);color:var(--red)}
+    .badge-maintenance{background:rgba(245,158,11,.15);color:var(--amber)}
+    .badge-offline{background:rgba(100,116,139,.15);color:var(--muted)}
+
+    .equip-details{
+      display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
+      font-size:12px;color:var(--muted);
+    }
+    .equip-detail-item{
+      display:flex;align-items:center;gap:4px;
+    }
+
+    .equip-actions{
+      display:flex;gap:8px;margin-top:10px;
+    }
+    .equip-btn{
+      flex:1;padding:10px;border-radius:10px;border:none;
+      font-size:12px;font-weight:600;cursor:pointer;
+      transition:transform .1s;
+    }
+    .equip-btn:active{transform:scale(0.97)}
+    .equip-btn-call{background:var(--green);color:#fff}
+    .equip-btn-map{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+
+    .equip-loading{
+      text-align:center;padding:20px;color:var(--muted);font-size:13px;
+    }
+    .equip-empty{
+      text-align:center;padding:20px;color:var(--muted);font-size:13px;
+    }
   </style>
 </head>
 <body>
@@ -158,6 +230,22 @@
   <div class="stat"><div class="stat-val" id="statSpeed">—</div><div class="stat-lbl">km/h</div></div>
 </div>
 
+<!-- Equipment Finder Section -->
+<hr class="divider"/>
+
+<div class="equip-finder">
+  <div class="card">
+    <div class="card-label">🚜 Equipment Finder</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+      Find available farm equipment near your location
+    </p>
+    <button class="btn-find" id="findEquipBtn" onclick="findNearbyEquipment()">
+      📍 Find Equipment Near Me
+    </button>
+    <div id="equipResults"></div>
+  </div>
+</div>
+
 <p class="hint">
   💡 On iPhone: tap Share → "Add to Home Screen" for a native-like experience
 </p>
@@ -166,6 +254,14 @@
   let watchId   = null;
   let pingCount = 0;
   let lastPingOk = false;
+  let currentLat = null;
+  let currentLng = null;
+
+  const CATEGORY_ICONS = {
+    'Tractor': '🚜', 'Harvester': '🌾', 'Plough': '⚒️',
+    'Seeder': '🌱', 'Sprayer': '💧', 'Thresher': '🏭',
+    'Rotavator': '🔄', 'Water Pump': '💦', 'Generator': '⚡', 'Other': '🔧'
+  };
 
   // Auto-fill server URL from env injected at build, or from current host
   const defaultServer = window.__SERVER_URL__ || '';
@@ -195,6 +291,8 @@
     if (!url) { setState('Enter server URL', 'error'); return; }
 
     litFlow('s-gps');
+    currentLat = lat;
+    currentLng = lng;
 
     try {
       const res = await fetch(`${url}/location`, {
@@ -271,6 +369,94 @@
     litFlow();
     document.getElementById('startBtn').style.display = 'block';
     document.getElementById('stopBtn').style.display  = 'none';
+  }
+
+  // Equipment Finder
+  async function findNearbyEquipment() {
+    const url = document.getElementById('serverUrl').value.trim().replace(/\/+$/, '');
+    const resultsDiv = document.getElementById('equipResults');
+
+    if (!url) {
+      resultsDiv.innerHTML = '<div class="equip-empty">⚠️ Enter server URL first</div>';
+      return;
+    }
+
+    const btn = document.getElementById('findEquipBtn');
+    btn.disabled = true;
+    btn.textContent = '🔍 Searching…';
+    resultsDiv.innerHTML = '<div class="equip-loading">Getting your location…</div>';
+
+    // Get current position
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        if (currentLat && currentLng) {
+          resolve({ coords: { latitude: currentLat, longitude: currentLng } });
+        } else {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 10000
+          });
+        }
+      });
+
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      resultsDiv.innerHTML = '<div class="equip-loading">Fetching equipment…</div>';
+
+      const res = await fetch(`${url}/equipment/nearby?lat=${lat}&lng=${lng}&radius=50`);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+
+      if (data.equipment.length === 0) {
+        resultsDiv.innerHTML = '<div class="equip-empty">No equipment found nearby</div>';
+      } else {
+        resultsDiv.innerHTML = data.equipment.map(e => {
+          const icon = CATEGORY_ICONS[e.category] || '🔧';
+          const statusClass = `badge-${e.status}`;
+          const statusLabels = {
+            available: 'Available', busy: 'Busy',
+            maintenance: 'Maintenance', offline: 'Offline'
+          };
+          const distText = e.distanceKm < 1
+            ? `${Math.round(e.distanceKm * 1000)} m`
+            : `${e.distanceKm.toFixed(1)} km`;
+
+          return `
+            <div class="equip-card">
+              <div class="equip-card-header">
+                <div class="equip-icon">${icon}</div>
+                <div class="equip-info">
+                  <div class="equip-name">${e.name}</div>
+                  <div class="equip-meta">${e.category} · ${e.owner}</div>
+                </div>
+                <div class="equip-badge ${statusClass}">
+                  ${statusLabels[e.status] || e.status}
+                </div>
+              </div>
+              <div class="equip-details">
+                <div class="equip-detail-item">📍 ${distText}</div>
+                <div class="equip-detail-item">💰 ₹${e.pricePerHour}/hr</div>
+                ${e.horsepower ? `<div class="equip-detail-item">⚡ ${e.horsepower} HP</div>` : ''}
+              </div>
+              <div class="equip-actions">
+                <a href="tel:${e.contact}" class="equip-btn equip-btn-call" style="text-decoration:none;text-align:center;">
+                  📞 Call Owner
+                </a>
+                <a href="https://www.google.com/maps?q=${e.lat},${e.lng}" target="_blank" rel="noopener"
+                   class="equip-btn equip-btn-map" style="text-decoration:none;text-align:center;">
+                  🗺️ Open in Maps
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (err) {
+      resultsDiv.innerHTML = `<div class="equip-empty">❌ ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📍 Find Equipment Near Me';
+    }
   }
 
   // Keep screen awake using Wake Lock API (supported on Android Chrome)

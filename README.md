@@ -1,250 +1,427 @@
-# 📡 Live GPS Tracker
+# 🚜 Smart Farm Tracking & Equipment Availability System
 
-A real-time GPS tracking dashboard. Track your phone's location live on a map — no fake data, no clutter. Just your real position.
+An IoT-powered **GPS Tracking + Farm Equipment Availability** platform built for agricultural operations. This system provides **real-time location tracking** for farm vehicles via mobile browsers and a complete **equipment rental/booking system** that helps farmers find, view, and book nearby agricultural machinery.
 
-**Live demo:**
-- Dashboard → [map-rouge-one.vercel.app](https://map-rouge-one.vercel.app)
-- Tracker → [map-rouge-one.vercel.app/tracker.html](https://map-rouge-one.vercel.app/tracker.html)
-- Backend → [map-xmu3.onrender.com](https://map-xmu3.onrender.com)
+The platform uses **WebSocket-based real-time updates**, a **responsive React dashboard** with Leaflet maps, and a **mobile-optimized GPS tracker** — all running entirely on phones and browsers with no specialized hardware required.
 
 ---
 
-## Stack
+## 🌐 Live Demo
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 18, Vite, Tailwind CSS, Framer Motion |
-| Map | Leaflet.js (OpenStreetMap tiles) |
-| Realtime | Socket.io (WebSocket) |
-| Backend | Node.js, Express |
-| Hosting | Vercel (client) + Render (server) |
+| Component | URL |
+|-----------|-----|
+| **Dashboard** | [https://map-rouge-one.vercel.app/](https://map-rouge-one.vercel.app/) |
+| **Mobile Tracker** | [https://map-rouge-one.vercel.app/tracker.html](https://map-rouge-one.vercel.app/tracker.html) |
+| **Backend API** | [https://map-xmu3.onrender.com](https://map-xmu3.onrender.com) |
 
 ---
 
-## Project Structure
+## ✨ Key Features
+
+| 📡 Live GPS Tracking | 🚜 Farm Equipment System |
+|----------------------|--------------------------|
+| Real-time GPS from phone browser | 12+ equipment items across Punjab region |
+| Live map with animated markers | Category-based filtering & search |
+| GPS trail visualization | Distance-based equipment discovery |
+| Auto-follow moving devices | Real-time booking with conflict detection |
+| Battery & speed monitoring | Haversine distance calculation |
+| Multi-device support | Auto-status updates (busy/available) |
+| WebSocket real-time sync | Equipment detail drawer with mini-map |
+| Dark-themed mobile tracker | Availability timeline visualization |
+| Works on any smartphone | Equipment markers on shared map |
+| No hardware required | Mobile-friendly Equipment Finder |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18, Vite, Tailwind CSS |
+| **Map** | Leaflet.js (OpenStreetMap tiles) |
+| **Animations** | Framer Motion |
+| **Icons** | Lucide React |
+| **Real-time** | Socket.io (WebSocket) |
+| **Backend** | Node.js, Express |
+| **Client Hosting** | Vercel |
+| **Server Hosting** | Render |
+
+---
+
+## 📁 Project Structure
 
 ```
-├── client/                  # React dashboard
+├── client/
 │   ├── src/
+│   │   ├── App.jsx                          # Main app with tab routing
+│   │   ├── main.jsx                         # React entry point
+│   │   ├── index.css                        # Tailwind imports
 │   │   ├── components/
-│   │   │   ├── MapView.jsx       # Leaflet map with live tracking
-│   │   │   ├── Sidebar.jsx       # Device list panel
-│   │   │   ├── DeviceCard.jsx    # Individual device card
-│   │   │   ├── AlertsPanel.jsx   # Low battery / idle alerts
-│   │   │   └── Navbar.jsx        # Top bar
+│   │   │   ├── MapView.jsx                  # Leaflet map with device + equipment layers
+│   │   │   ├── Sidebar.jsx                  # Device tracking sidebar
+│   │   │   ├── DeviceCard.jsx               # Individual device card
+│   │   │   ├── AlertsPanel.jsx              # System alerts
+│   │   │   ├── Navbar.jsx                   # Top nav with tab switcher
+│   │   │   └── equipment/
+│   │   │       ├── EquipmentPanel.jsx       # Equipment sidebar with filters
+│   │   │       ├── EquipmentCard.jsx        # Equipment card with status/distance
+│   │   │       ├── EquipmentMapLayer.jsx    # Leaflet markers for equipment
+│   │   │       ├── EquipmentStats.jsx       # Stats cards + donut chart
+│   │   │       ├── BookingModal.jsx         # Booking form with validation
+│   │   │       └── EquipmentDetailDrawer.jsx # Full equipment detail view
 │   │   ├── hooks/
-│   │   │   └── useDevices.js     # Socket.io + REST data hook
+│   │   │   ├── useDevices.js                # Device tracking hook (Socket.io)
+│   │   │   ├── useEquipment.js              # Equipment data hook (Socket.io)
+│   │   │   └── useUserLocation.js           # Browser geolocation hook
 │   │   └── utils/
-│   │       └── statusConfig.js   # Status → color/label mapping
+│   │       ├── statusConfig.js              # Device status config
+│   │       ├── equipmentConfig.js           # Equipment categories, colors, labels
+│   │       └── injectStyles.js              # Dynamic style injection
 │   └── public/
-│       └── tracker.html          # Mobile GPS sender page
+│       └── tracker.html                     # Mobile GPS sender + Equipment Finder
 │
-├── server/                  # Node.js backend
+├── server/
+│   ├── index.js                             # Express + Socket.io entry point
 │   ├── controllers/
-│   │   ├── deviceController.js   # GET /devices
-│   │   └── trackingController.js # POST /location, POST /status
+│   │   ├── deviceController.js              # Device CRUD handlers
+│   │   ├── trackingController.js            # GPS location receiver
+│   │   └── equipmentController.js           # Equipment API handlers
 │   ├── data/
-│   │   └── devices.js            # In-memory device store
+│   │   ├── devices.js                       # In-memory device store
+│   │   └── equipment.js                     # Pre-seeded equipment (12 items)
 │   ├── routes/
-│   │   ├── deviceRoutes.js
-│   │   └── trackingRoutes.js
-│   ├── services/
-│   │   └── simulationService.js  # Status updater (idle detection)
-│   └── index.js                  # Express + Socket.io server
+│   │   ├── deviceRoutes.js                  # /devices routes
+│   │   ├── trackingRoutes.js                # /location, /status routes
+│   │   └── equipmentRoutes.js               # /equipment routes
+│   └── services/
+│       ├── simulationService.js             # Device status simulation
+│       └── equipmentService.js              # Haversine, booking logic, auto-updater
 │
-├── server/esp8266.ino       # ESP8266 firmware (optional hardware)
-└── server/esp32_full.ino    # ESP32 firmware (optional hardware)
+└── README.md
 ```
 
 ---
 
-## How It Works
+## 🔄 How It Works
+
+### GPS Tracking Flow
 
 ```
-Phone (tracker.html)
-    │
-    │  POST /location  {id, lat, lng, accuracy, speed}
-    ▼
-Backend (Render)
-    │
-    │  Socket.io emit  devices:update
-    ▼
-Dashboard (Vercel)
-    │
-    └─ Leaflet map updates marker + trail in real time
+📱 Phone Browser                    🖥️ Server                    🗺️ Dashboard
+     │                                  │                              │
+     │  navigator.geolocation           │                              │
+     │  watchPosition()                 │                              │
+     │                                  │                              │
+     ├──── POST /location ─────────────►│                              │
+     │     { id, lat, lng,              │                              │
+     │       speed, battery }           │  upsertDevice()              │
+     │                                  │  io.emit('devices:update')   │
+     │                                  ├─────── WebSocket ───────────►│
+     │                                  │                              │  Update marker
+     │                                  │                              │  on Leaflet map
+     │◄──── { ok: true } ──────────────┤                              │
+```
+
+### Equipment Availability Flow
+
+```
+👨‍🌾 Farmer                         🖥️ Server                    🗺️ Dashboard
+     │                                  │                              │
+     ├──── GET /equipment/nearby ──────►│                              │
+     │     ?lat=X&lng=Y&radius=10       │  haversineKm()               │
+     │                                  │  sort by distance            │
+     │◄──── { equipment: [...] } ──────┤                              │
+     │                                  │                              │
+     ├──── POST /equipment/:id/book ───►│                              │
+     │     { bookedBy, startTime,       │  validate overlaps           │
+     │       endTime, purpose }         │  update status               │
+     │                                  │  io.emit('equipment:booked') │
+     │                                  ├─────── WebSocket ───────────►│
+     │◄──── { success: true } ─────────┤                              │  Update card/marker
+     │                                  │                              │
+     │                           ⏰ Every 60s:                         │
+     │                           autoStatusUpdater()                   │
+     │                           checks booking times                  │
+     │                           updates busy ↔ available              │
 ```
 
 ---
 
-## Running Locally
+## 🚜 Equipment System
 
-### 1. Clone
+The equipment module provides a complete marketplace for agricultural machinery:
+
+- **12 pre-seeded items** spread across the Punjab/Amritsar region (lat ~31.6, lng ~74.8)
+- **10 equipment categories**: Tractor, Harvester, Plough, Seeder, Sprayer, Thresher, Rotavator, Water Pump, Generator, Other
+- **4 status types**: Available (green), Busy (red), Maintenance (yellow), Offline (gray)
+- **Real-time booking** with time overlap validation and automatic status transitions
+- **Haversine distance** calculation to find nearest equipment from user's GPS position
+- **Auto-status updater** runs every 60 seconds to transition equipment between busy/available based on booking times
+
+---
+
+## 🚀 Running Locally
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Adi6tnine/map.git
 cd map
 ```
 
-### 2. Start the server
+### 2. Start the backend server
 
 ```bash
 cd server
 npm install
-npm run dev
-# Runs on http://localhost:4000
+npm run dev    # starts on http://localhost:4000
 ```
 
-### 3. Start the client
+### 3. Start the frontend
 
 ```bash
 cd client
 npm install
-npm run dev
-# Runs on http://localhost:5173
+npm run dev    # starts on http://localhost:5173
 ```
 
-### 4. Open tracker on your phone
+### 4. Open the dashboard
 
-Open `http://<your-pc-ip>:5173/tracker.html` on your phone (must be on same WiFi).
-
-Set Server URL to `http://<your-pc-ip>:4000` and tap **Start Tracking**.
+- **Dashboard**: http://localhost:5173
+- **Mobile Tracker**: http://localhost:5173/tracker.html
+- **API Health**: http://localhost:4000/health
+- **Equipment API**: http://localhost:4000/equipment
+- **Nearby Equipment**: http://localhost:4000/equipment/nearby?lat=31.634&lng=74.872&radius=10
 
 ---
 
-## Environment Variables
+## 🔐 Environment Variables
 
 ### Server (`server/.env`)
 
-```env
-PORT=4000
-CLIENT_ORIGIN=*
-SIMULATION_INTERVAL_MS=2500
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `4000` | Server port |
+| `CLIENT_ORIGIN` | `*` | Allowed CORS origins (comma-separated) |
+| `SIMULATION_INTERVAL_MS` | `2500` | Device status check interval |
 
-### Client (`client/.env`)
+### Client (`client/.env.production`)
 
-```env
-VITE_SERVER_URL=http://localhost:4000
-```
-
-For production, `client/.env.production`:
-
-```env
-VITE_SERVER_URL=https://map-xmu3.onrender.com
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_SERVER_URL` | `http://localhost:4000` | Backend API URL |
 
 ---
 
-## API Endpoints
+## 📡 Full API Reference
 
-### `POST /location`
-Send GPS coordinates from phone or ESP device.
+### Existing Device Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/location` | Receive GPS data from phone |
+| `POST` | `/status` | Receive battery/status from device |
+| `GET` | `/devices` | Return all tracked devices |
+| `GET` | `/devices/:id` | Return single device by ID |
+| `POST` | `/devices/update` | Update a device (partial) |
+| `GET` | `/health` | Health check |
+
+### Equipment Endpoints
+
+#### `GET /equipment`
+
+Returns all equipment. Supports optional query filters.
+
+```
+GET /equipment?category=Tractor&status=available
+```
+
+**Response:**
 ```json
 {
-  "id": "TRANSPORT-001",
-  "type": "Transport",
-  "lat": 28.6139,
-  "lng": 77.2090,
-  "accuracy": 5,
-  "speed": 12.5,
-  "source": "mobile"
+  "equipment": [...],
+  "total": 12,
+  "available": 7,
+  "busy": 3
 }
 ```
 
-### `POST /status`
-Send device status (battery, etc.).
+#### `GET /equipment/:id`
 
+Returns a single equipment item.
+
+```
+GET /equipment/EQUIP-001
+```
+
+#### `GET /equipment/nearby`
+
+Returns equipment sorted by distance from user location.
+
+```
+GET /equipment/nearby?lat=31.634&lng=74.872&radius=10
+```
+
+**Response:**
 ```json
 {
-  "id": "TRANSPORT-001",
-  "battery": 85,
-  "source": "esp8266"
+  "equipment": [
+    {
+      "id": "EQUIP-005",
+      "name": "MB Plough (3-Furrow)",
+      "distanceKm": 0.45,
+      ...
+    }
+  ],
+  "userLocation": { "lat": 31.634, "lng": 74.872 },
+  "radiusKm": 10,
+  "count": 8
 }
 ```
 
-### `GET /devices`
-Returns all currently tracked devices.
+#### `GET /equipment/stats`
 
-### `GET /health`
-Returns `{ "status": "ok", "time": "..." }`
+Returns dashboard statistics.
 
----
-
-## Mobile Tracker (`tracker.html`)
-
-Open `https://map-rouge-one.vercel.app/tracker.html` on any phone browser.
-
-- Set **Device ID** — any name you want (e.g. `MY-PHONE`)
-- Set **Server URL** — `https://map-xmu3.onrender.com`
-- Tap **Start Tracking** and allow location permission
-- Your position appears live on the dashboard
-
-Works on Android Chrome and iOS Safari. Add to home screen for a native-like experience.
-
----
-
-## ESP8266 Hardware (Optional)
-
-Flash `server/esp8266.ino` to an ESP8266 module.
-
-**What it does:**
-1. Connects to WiFi
-2. Runs a tiny HTTP server on port 80
-3. Phone browser POSTs GPS to ESP8266 at `POST /gps`
-4. ESP8266 forwards GPS + battery reading to the backend
-
-**Required libraries:** None — uses only ESP8266 core built-ins.
-
-**Config in the sketch:**
-```cpp
-const char* WIFI_SSID     = "YourWiFi";
-const char* WIFI_PASSWORD = "YourPassword";
-const char* BACKEND_URL   = "https://map-xmu3.onrender.com/location";
-const char* DEVICE_ID     = "TRANSPORT-001";
+```json
+{
+  "total": 12,
+  "available": 7,
+  "busy": 3,
+  "maintenance": 1,
+  "offline": 1,
+  "byCategory": { "Tractor": 2, "Harvester": 2, ... },
+  "utilization": "25%"
+}
 ```
 
-**Board setup:**
-- Board: `Generic ESP8266 Module` or `NodeMCU 1.0`
-- Board URL: `https://arduino.esp8266.com/stable/package_esp8266com_index.json`
+#### `POST /equipment/:id/book`
+
+Create a new booking with time overlap validation.
+
+```json
+POST /equipment/EQUIP-001/book
+{
+  "bookedBy": "Farmer Name",
+  "phone": "+91-98765-43210",
+  "startTime": "2025-04-27T08:00:00Z",
+  "endTime": "2025-04-27T14:00:00Z",
+  "purpose": "Field ploughing"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "booking": { "id": "BOOK-xxx", ... },
+  "equipment": { ... }
+}
+```
+
+#### `DELETE /equipment/:id/book/:bookingId`
+
+Cancel a booking and re-evaluate equipment status.
+
+#### `POST /equipment/:id/location`
+
+Update equipment GPS location (from phone tracking it).
+
+```json
+{ "lat": 31.634, "lng": 74.872, "accuracy": 5 }
+```
+
+#### `PUT /equipment/:id/status`
+
+Manually update equipment status (admin).
+
+```json
+{ "status": "maintenance" }
+```
 
 ---
 
-## Deployment
+## 🏷️ Equipment Categories
 
-### Backend → Render
-
-1. Go to [render.com](https://render.com) → New Web Service
-2. Connect `Adi6tnine/map` repo
-3. Set:
-   - Root Directory: `server`
-   - Build Command: `npm install`
-   - Start Command: `node index.js`
-4. Deploy → copy the URL
-
-### Frontend → Vercel
-
-1. Go to [vercel.com](https://vercel.com) → New Project
-2. Connect `Adi6tnine/map` repo
-3. Set:
-   - Root Directory: `client`
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-4. Add environment variable: `VITE_SERVER_URL` = your Render URL
-5. Deploy
+| Icon | Category | Typical Price Range (₹/hr) |
+|------|----------|---------------------------|
+| 🚜 | Tractor | ₹400 – ₹500 |
+| 🌾 | Harvester | ₹1,000 – ₹1,200 |
+| ⚒️ | Plough | ₹200 – ₹300 |
+| 🌱 | Seeder | ₹400 – ₹500 |
+| 💧 | Sprayer | ₹250 – ₹350 |
+| 🏭 | Thresher | ₹500 – ₹700 |
+| 🔄 | Rotavator | ₹300 – ₹400 |
+| 💦 | Water Pump | ₹150 – ₹250 |
+| ⚡ | Generator | ₹300 – ₹400 |
+| 🔧 | Other | ₹500 – ₹1,000 |
 
 ---
 
-## Map Features
+## 📱 Mobile Usage
 
-- **Auto-follow** — map pans smoothly as your device moves
-- **GPS trail** — dashed blue line shows your path (last 200 points)
-- **Fly-to** — click a device card to zoom in on it
-- **Follow button** — re-enables auto-follow after manual pan
-- **Waiting overlay** — shown when no devices are connected
+### GPS Tracker (`/tracker.html`)
+
+1. Open tracker.html on your phone browser
+2. Enter your Device ID and Server URL
+3. Tap **"Start Tracking"** — your GPS streams to the dashboard in real-time
+4. View your position on the dashboard map with live trail
+
+### Equipment Finder (bottom of tracker.html)
+
+1. Scroll to the **"Equipment Finder"** section
+2. Tap **"Find Equipment Near Me"**
+3. Browse nearby equipment cards with distance, price, and status
+4. Tap **"Call Owner"** to dial directly or **"Open in Maps"** for directions
 
 ---
 
-## License
+## 🌍 Deployment
 
-MIT
+### Backend (Render)
+
+1. Create a new **Web Service** on [Render](https://render.com)
+2. Connect your GitHub repository
+3. Set build command: `cd server && npm install`
+4. Set start command: `cd server && npm start`
+5. Add environment variable: `CLIENT_ORIGIN=https://your-vercel-url.vercel.app`
+
+### Frontend (Vercel)
+
+1. Import project on [Vercel](https://vercel.com)
+2. Set root directory to `client`
+3. Set environment variable: `VITE_SERVER_URL=https://your-render-url.onrender.com`
+4. Deploy
+
+---
+
+## 📸 Screenshots
+
+> Screenshots will be added after deployment verification.
+
+---
+
+## 🗺️ Future Roadmap
+
+- [ ] **Payment Integration** — UPI/Razorpay for booking payments
+- [ ] **Reviews & Ratings** — Farmers can rate equipment after use
+- [ ] **Push Notifications** — Alerts for booking confirmations and reminders
+- [ ] **Equipment Owner Dashboard** — Owners manage their equipment fleet
+- [ ] **Booking History** — Past bookings with usage analytics
+- [ ] **Multi-language Support** — Hindi, Punjabi, and regional languages
+- [ ] **Weather Integration** — Show weather for farming activity planning
+- [ ] **AI Recommendations** — Suggest best equipment based on crop/field size
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+**Built with ❤️ for Indian Farmers** 🇮🇳

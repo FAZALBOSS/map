@@ -1,17 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { useDevices } from './hooks/useDevices';
+import { useEquipment } from './hooks/useEquipment';
+import { useUserLocation } from './hooks/useUserLocation';
 import { injectStyles } from './utils/injectStyles';
 import Navbar from './components/Navbar';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
+import EquipmentPanel from './components/equipment/EquipmentPanel';
+import BookingModal from './components/equipment/BookingModal';
+import EquipmentDetailDrawer from './components/equipment/EquipmentDetailDrawer';
 
 export default function App() {
-  const { devices, loading, error, connected } = useDevices();
+  const { devices, loading: devLoading, error: devError, connected } = useDevices();
+  const { equipment, stats, loading: equipLoading, error: equipError, refetch } = useEquipment();
+  const { userLat, userLng } = useUserLocation();
+
   const [focusedDevice, setFocusedDevice] = useState(null);
+  const [activeTab, setActiveTab] = useState('tracking');
+  const [showEquipment, setShowEquipment] = useState(false);
+  const [bookingEquipment, setBookingEquipment] = useState(null);
+  const [detailEquipment, setDetailEquipment] = useState(null);
+  const [flyToEquipment, setFlyToEquipment] = useState(null);
 
   useEffect(() => {
     injectStyles();
   }, []);
+
+  // Auto-show equipment layer when on equipment tab
+  useEffect(() => {
+    setShowEquipment(activeTab === 'equipment');
+  }, [activeTab]);
+
+  const handleViewOnMap = (equip) => {
+    setFlyToEquipment(equip);
+    // Reset after fly animation
+    setTimeout(() => setFlyToEquipment(null), 2000);
+  };
+
+  const handleBookNow = (equip) => {
+    setBookingEquipment(equip);
+  };
+
+  const handleViewDetails = (equip) => {
+    setDetailEquipment(equip);
+  };
+
+  const handleBooked = () => {
+    refetch();
+    setBookingEquipment(null);
+  };
+
+  const loading = activeTab === 'tracking' ? devLoading : (devLoading && equipLoading);
+  const error = activeTab === 'tracking' ? devError : devError;
 
   if (loading) {
     return (
@@ -38,19 +78,59 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-white text-gray-900 font-sans overflow-hidden">
-      <Navbar connected={connected} />
+      <Navbar connected={connected} activeTab={activeTab} onTabChange={setActiveTab} />
       <main className="flex-1 flex overflow-hidden">
         <MapView
           devices={devices}
           focusedDevice={focusedDevice}
           setFocusedDevice={setFocusedDevice}
+          equipment={equipment}
+          showEquipment={showEquipment}
+          userLat={userLat}
+          userLng={userLng}
+          onBookFromMap={handleBookNow}
+          flyToEquipment={flyToEquipment}
         />
-        <Sidebar
-          devices={devices}
-          focusedDevice={focusedDevice}
-          setFocusedDevice={setFocusedDevice}
-        />
+        {activeTab === 'tracking' ? (
+          <Sidebar
+            devices={devices}
+            focusedDevice={focusedDevice}
+            setFocusedDevice={setFocusedDevice}
+          />
+        ) : (
+          <EquipmentPanel
+            equipment={equipment}
+            stats={stats}
+            loading={equipLoading}
+            userLat={userLat}
+            userLng={userLng}
+            onViewOnMap={handleViewOnMap}
+            onBookNow={handleBookNow}
+            onViewDetails={handleViewDetails}
+            onRefresh={refetch}
+          />
+        )}
       </main>
+
+      {/* Booking Modal */}
+      {bookingEquipment && (
+        <BookingModal
+          equipment={bookingEquipment}
+          onClose={() => setBookingEquipment(null)}
+          onBooked={handleBooked}
+        />
+      )}
+
+      {/* Detail Drawer */}
+      {detailEquipment && (
+        <EquipmentDetailDrawer
+          equipment={detailEquipment}
+          onClose={() => setDetailEquipment(null)}
+          onBook={handleBookNow}
+          userLat={userLat}
+          userLng={userLng}
+        />
+      )}
     </div>
   );
 }
