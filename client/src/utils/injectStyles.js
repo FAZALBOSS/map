@@ -40,6 +40,7 @@ export function injectStyles() {
     .leaflet-popup-content { margin: 12px; }
     .leaflet-popup-tip { background: var(--bg-surface) !important; border-top: 1px solid var(--border-light); border-left: 1px solid var(--border-light); }
     .custom-leaflet-icon { background: transparent; border: none; }
+    .equipment-leaflet-icon { background: transparent; border: none; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }

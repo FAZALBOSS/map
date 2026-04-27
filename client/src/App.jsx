@@ -50,10 +50,10 @@ export default function App() {
     setBookingEquipment(null);
   };
 
-  const loading = activeTab === 'tracking' ? devLoading : (devLoading && equipLoading);
-  const error = activeTab === 'tracking' ? devError : devError;
+  // Show loading only during initial connection
+  const isInitialLoad = devLoading && equipLoading;
 
-  if (loading) {
+  if (isInitialLoad) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -64,12 +64,13 @@ export default function App() {
     );
   }
 
-  if (error) {
+  // Only show error if BOTH hooks failed
+  if (devError && equipError) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-red-500 font-medium mb-1">Failed to connect</p>
-          <p className="text-sm text-gray-400">{error}</p>
+          <p className="text-sm text-gray-400">{devError}</p>
           <p className="text-xs text-gray-400 mt-2">Make sure the server is running on port 4000</p>
         </div>
       </div>

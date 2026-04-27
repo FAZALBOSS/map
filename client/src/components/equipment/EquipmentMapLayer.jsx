@@ -99,6 +99,118 @@ function buildPopupHtml(equip, distanceKm) {
   `;
 }
 
+/**
+ * Manages equipment markers on a Leaflet map.
+ * Call updateMarkers() to add/update/remove markers.
+ * Call setVisible() to show/hide the layer.
+ * Call destroy() to clean up.
+ */
+export function createEquipmentLayer() {
+  let layerGroup = null;
+  let markers = {};
+  let isVisible = false;
+
+  function ensureLayerGroup(map) {
+    if (!layerGroup && window.L) {
+      layerGroup = window.L.layerGroup();
+    }
+    return layerGroup;
+  }
+
+  function setVisible(map, visible) {
+    if (!map || !window.L) return;
+    const lg = ensureLayerGroup(map);
+    if (!lg) return;
+
+    try {
+      if (visible && !map.hasLayer(lg)) {
+        lg.addTo(map);
+        isVisible = true;
+      } else if (!visible && map.hasLayer(lg)) {
+        map.removeLayer(lg);
+        isVisible = false;
+      }
+    } catch (e) {
+      console.warn('EquipmentLayer: visibility toggle error', e);
+    }
+  }
+
+  function updateMarkers(map, equipment, userLat, userLng) {
+    if (!map || !window.L) return;
+    const lg = ensureLayerGroup(map);
+    if (!lg) return;
+
+    try {
+      // Remove stale markers
+      const currentIds = new Set(equipment.map(e => e.id));
+      Object.keys(markers).forEach(id => {
+        if (!currentIds.has(id)) {
+          try { lg.removeLayer(markers[id]); } catch (e) { /* ignore */ }
+          delete markers[id];
+        }
+      });
+
+      // Add/update markers
+      equipment.forEach(equip => {
+        if (!equip.lat || !equip.lng) return;
+
+        let distanceKm = null;
+        if (userLat != null && userLng != null) {
+          const R = 6371;
+          const dLat = ((equip.lat - userLat) * Math.PI) / 180;
+          const dLng = ((equip.lng - userLng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((userLat * Math.PI) / 180) *
+              Math.cos((equip.lat * Math.PI) / 180) *
+              Math.sin(dLng / 2) ** 2;
+          distanceKm = parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
+        }
+
+        const icon = window.L.divIcon({
+          className: 'equipment-leaflet-icon',
+          html: buildEquipmentMarkerHtml(equip),
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+        });
+
+        let marker = markers[equip.id];
+        if (!marker) {
+          marker = window.L.marker([equip.lat, equip.lng], { icon }).addTo(lg);
+          markers[equip.id] = marker;
+        } else {
+          marker.setLatLng([equip.lat, equip.lng]);
+          marker.setIcon(icon);
+        }
+
+        marker.bindPopup(buildPopupHtml(equip, distanceKm), {
+          maxWidth: 280,
+          offset: [0, -12],
+        });
+      });
+    } catch (err) {
+      console.warn('EquipmentLayer: marker update error', err);
+    }
+  }
+
+  function destroy(map) {
+    try {
+      if (layerGroup && map) {
+        map.removeLayer(layerGroup);
+      }
+    } catch (e) { /* ignore */ }
+    markers = {};
+    layerGroup = null;
+    isVisible = false;
+  }
+
+  return { setVisible, updateMarkers, destroy };
+}
+
+/**
+ * React component wrapper — uses imperative API internally.
+ * Renders nothing to the DOM; all rendering is via Leaflet.
+ */
 export default function EquipmentMapLayer({
   mapRef,
   equipment,
@@ -107,8 +219,7 @@ export default function EquipmentMapLayer({
   userLng,
   onBookFromMap,
 }) {
-  const markersRef = useRef({});
-  const layerGroupRef = useRef(null);
+  const layerRef = useRef(null);
 
   // Expose book function globally for popup button
   useEffect(() => {
@@ -116,92 +227,33 @@ export default function EquipmentMapLayer({
       const equip = equipment.find((e) => e.id === id);
       if (equip && onBookFromMap) onBookFromMap(equip);
     };
-    return () => {
-      delete window.__equipBookFromMap;
-    };
+    return () => { delete window.__equipBookFromMap; };
   }, [equipment, onBookFromMap]);
 
+  // Create/destroy the equipment layer
   useEffect(() => {
-    if (!mapRef || !window.L) return;
-
-    // Create layer group on first render
-    if (!layerGroupRef.current) {
-      layerGroupRef.current = window.L.layerGroup();
+    if (!layerRef.current) {
+      layerRef.current = createEquipmentLayer();
     }
-
-    const layerGroup = layerGroupRef.current;
-
-    // Toggle visibility
-    if (visible) {
-      if (!mapRef.hasLayer(layerGroup)) {
-        layerGroup.addTo(mapRef);
-      }
-    } else {
-      if (mapRef.hasLayer(layerGroup)) {
-        mapRef.removeLayer(layerGroup);
-      }
-      return;
-    }
-
-    // Clean up old markers not in current equipment
-    const currentIds = new Set(equipment.map((e) => e.id));
-    Object.keys(markersRef.current).forEach((id) => {
-      if (!currentIds.has(id)) {
-        layerGroup.removeLayer(markersRef.current[id]);
-        delete markersRef.current[id];
-      }
-    });
-
-    // Add/update markers
-    equipment.forEach((equip) => {
-      if (!equip.lat || !equip.lng) return;
-
-      let distanceKm = null;
-      if (userLat != null && userLng != null) {
-        const R = 6371;
-        const dLat = ((equip.lat - userLat) * Math.PI) / 180;
-        const dLng = ((equip.lng - userLng) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos((userLat * Math.PI) / 180) *
-            Math.cos((equip.lat * Math.PI) / 180) *
-            Math.sin(dLng / 2) ** 2;
-        distanceKm = parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
-      }
-
-      const icon = window.L.divIcon({
-        className: 'equipment-leaflet-icon',
-        html: buildEquipmentMarkerHtml(equip),
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-
-      let marker = markersRef.current[equip.id];
-      if (!marker) {
-        marker = window.L.marker([equip.lat, equip.lng], { icon }).addTo(layerGroup);
-        markersRef.current[equip.id] = marker;
-      } else {
-        marker.setLatLng([equip.lat, equip.lng]);
-        marker.setIcon(icon);
-      }
-
-      marker.bindPopup(buildPopupHtml(equip, distanceKm), {
-        maxWidth: 280,
-        offset: [0, -12],
-      });
-    });
-  }, [mapRef, equipment, visible, userLat, userLng]);
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
-      if (layerGroupRef.current && mapRef) {
-        mapRef.removeLayer(layerGroupRef.current);
+      if (layerRef.current) {
+        layerRef.current.destroy(mapRef);
+        layerRef.current = null;
       }
-      markersRef.current = {};
-      layerGroupRef.current = null;
     };
   }, []);
 
-  return null; // This component renders via Leaflet, not React DOM
+  // Update visibility
+  useEffect(() => {
+    if (!mapRef || !window.L || !layerRef.current) return;
+    layerRef.current.setVisible(mapRef, visible);
+  }, [mapRef, visible]);
+
+  // Update markers
+  useEffect(() => {
+    if (!mapRef || !window.L || !layerRef.current || !visible) return;
+    layerRef.current.updateMarkers(mapRef, equipment || [], userLat, userLng);
+  }, [mapRef, equipment, visible, userLat, userLng]);
+
+  return null;
 }

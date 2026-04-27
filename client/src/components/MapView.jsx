@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStatusConfig } from '../utils/statusConfig';
-import EquipmentMapLayer from './equipment/EquipmentMapLayer';
+import { createEquipmentLayer } from './equipment/EquipmentMapLayer';
 
 function buildMarkerHtml(device, isFocused) {
   const pulse = device.source === 'mobile' || device.source === 'esp8266';
@@ -41,6 +41,7 @@ export default function MapView({
   const [mapReady, setMapReady] = useState(false);
   const autoFollowRef = useRef(true);
   const initializedRef = useRef(false);
+  const equipLayerRef = useRef(null);
 
   // Load Leaflet
   useEffect(() => {
@@ -75,7 +76,15 @@ export default function MapView({
     map.on('dragstart', () => { autoFollowRef.current = false; });
 
     mapRef.current = map;
+
+    // Create equipment layer imperatively
+    equipLayerRef.current = createEquipmentLayer();
+
     return () => {
+      if (equipLayerRef.current) {
+        equipLayerRef.current.destroy(map);
+        equipLayerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       markersRef.current = {};
@@ -84,6 +93,28 @@ export default function MapView({
       initializedRef.current = false;
     };
   }, [mapReady]);
+
+  // Equipment layer: visibility + markers
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !equipLayerRef.current) return;
+    const map = mapRef.current;
+    const layer = equipLayerRef.current;
+
+    layer.setVisible(map, showEquipment);
+
+    if (showEquipment && equipment) {
+      layer.updateMarkers(map, equipment, userLat, userLng);
+    }
+  }, [mapReady, showEquipment, equipment, userLat, userLng]);
+
+  // Equipment: expose book function for popup buttons
+  useEffect(() => {
+    window.__equipBookFromMap = (id) => {
+      const equip = (equipment || []).find((e) => e.id === id);
+      if (equip && onBookFromMap) onBookFromMap(equip);
+    };
+    return () => { delete window.__equipBookFromMap; };
+  }, [equipment, onBookFromMap]);
 
   // Fly to equipment when requested
   useEffect(() => {
@@ -205,18 +236,6 @@ export default function MapView({
   return (
     <section className="flex-1 relative">
       <div id="leaflet-map" className="w-full h-full" />
-
-      {/* Equipment Map Layer */}
-      {mapReady && mapRef.current && (
-        <EquipmentMapLayer
-          mapRef={mapRef.current}
-          equipment={equipment || []}
-          visible={showEquipment}
-          userLat={userLat}
-          userLng={userLng}
-          onBookFromMap={onBookFromMap}
-        />
-      )}
 
       {/* Re-center */}
       {realDevice && (

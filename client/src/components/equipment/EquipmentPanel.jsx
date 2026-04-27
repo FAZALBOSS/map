@@ -21,14 +21,16 @@ export default function EquipmentPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [radiusKm, setRadiusKm] = useState(10);
-  const [sortBy, setSortBy] = useState('distance');
+  const [radiusKm, setRadiusKm] = useState(50);
+  const [sortBy, setSortBy] = useState('name');
+
+  const hasLocation = userLat != null && userLng != null;
 
   // Calculate distances and filter/sort
   const processedEquipment = useMemo(() => {
     let items = equipment.map((e) => {
       let distanceKm = null;
-      if (userLat != null && userLng != null) {
+      if (hasLocation) {
         const R = 6371;
         const dLat = ((e.lat - userLat) * Math.PI) / 180;
         const dLng = ((e.lng - userLng) * Math.PI) / 180;
@@ -63,14 +65,15 @@ export default function EquipmentPanel({
       items = items.filter((e) => e.status === selectedStatus.toLowerCase());
     }
 
-    // Radius filter (only if user location is known)
-    if (userLat != null && userLng != null) {
+    // Radius filter — only applied when user location is known
+    if (hasLocation) {
       items = items.filter((e) => e.distanceKm != null && e.distanceKm <= radiusKm);
     }
 
     // Sort
     items.sort((a, b) => {
       if (sortBy === 'distance') {
+        if (a.distanceKm == null && b.distanceKm == null) return a.name.localeCompare(b.name);
         if (a.distanceKm == null) return 1;
         if (b.distanceKm == null) return -1;
         return a.distanceKm - b.distanceKm;
@@ -81,7 +84,7 @@ export default function EquipmentPanel({
     });
 
     return items;
-  }, [equipment, searchQuery, selectedCategory, selectedStatus, radiusKm, sortBy, userLat, userLng]);
+  }, [equipment, searchQuery, selectedCategory, selectedStatus, radiusKm, sortBy, hasLocation, userLat, userLng]);
 
   return (
     <aside className="w-[420px] bg-white border-l border-gray-200 flex flex-col shrink-0 z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
@@ -145,18 +148,26 @@ export default function EquipmentPanel({
         {/* Radius slider & Sort */}
         <div className="flex items-center gap-3 mt-3">
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-0.5">
-              <label className="text-[10px] font-medium text-gray-500 uppercase">Radius</label>
-              <span className="text-[10px] font-semibold text-gray-700">{radiusKm} km</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="50"
-              value={radiusKm}
-              onChange={(e) => setRadiusKm(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-emerald-500"
-            />
+            {hasLocation ? (
+              <>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label className="text-[10px] font-medium text-gray-500 uppercase">Radius</label>
+                  <span className="text-[10px] font-semibold text-gray-700">{radiusKm} km</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-emerald-500"
+                />
+              </>
+            ) : (
+              <div className="text-[10px] text-gray-400 italic">
+                📍 Allow location access to see distances & filter by radius
+              </div>
+            )}
           </div>
           <div>
             <label className="text-[10px] font-medium text-gray-500 uppercase block mb-0.5">Sort</label>
